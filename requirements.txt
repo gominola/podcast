@@ -1,0 +1,15 @@
+openai>=1.30.0,<2
+python-dotenv>=1.0.1,<2
+pydub>=0.25.1,<1
+
+# MoviePy moderno compatible con Pillow>=10
+moviepy==2.0.0.dev2
+numpy>=1.24
+imageio>=2.31
+imageio-ffmpeg>=0.4.9
+decorator>=4.4.2
+proglog>=0.1.10
+
+pillow>=10.0.0,<11
+requests>=2.31.0,<3
+colorama>=0.4.6,<1

@@ -1,0 +1,25 @@
+{
+  "tema": "El universo",
+  "presentador": "Héctor",
+  "entrevistado": "Aura",
+  "idioma": "es",
+  "tono_hector": "curioso, directo, incisivo; evita cumplidos y el nombre del invitado salvo lo imprescindible",
+  "tono_aura": "clara, concreta; ejemplos breves y analogías sencillas; cero peloteo",
+  "nivel_formalidad": "medio",
+  "longitud_respuestas": "media",
+  "temperatura": 0.8,
+  "preguntas_improvisadas": [1, 2],
+  "guardar_guion": true,
+  "formato_guardado": "txt",
+  "preguntas_guia": [
+    "Vamos a empezar con algo que a todos nos intriga: ¿Cómo surgió la teoría del Big Bang y qué evidencia la respalda?",
+    "¿Qué sabemos sobre la expansión del universo y cómo se mide?",
+    "¿Cuáles son las principales teorías sobre el destino final del universo?",
+    "¿Cómo se descubrió la energía oscura y qué impacto tiene en la cosmología?",
+    "¿Qué métodos utilizan los astrónomos para medir distancias en el universo?"
+  ],
+  "humor_nivel": "bajo",
+  "permitir_ironia": false,
+  "referencias_pop": false,
+  "muletillas_permitidas": ["vale", "ojo"]
+}

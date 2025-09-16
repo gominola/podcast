@@ -1,0 +1,39 @@
+{
+  "tema": "Fisica cuantica vs clasica",
+  "presentador": "Héctor",
+  "entrevistado": "Aura",
+  "idioma": "es",
+  "tono_hector": "curioso, directo; busca ejemplos cotidianos que aterricen conceptos abstractos",
+  "tono_aura": "divulgadora clara; contrasta intuición clásica vs paradojas cuánticas con comparaciones simples",
+  "nivel_formalidad": "medio",
+  "longitud_respuestas": "media",
+  "temperatura": 0.85,
+  "preguntas_improvisadas": [1, 2],
+  "guardar_guion": true,
+  "formato_guardado": "txt",
+  "preguntas_guia": [
+    "Para situarnos: ¿qué diferencia esencial hay entre el mundo clásico (newtoniano) y el cuántico?",
+    "¿Puedes poner un ejemplo cotidiano donde la física clásica explica bien algo y otro donde la cuántica sea imprescindible?",
+    "Superposición, entrelazamiento y colapso: ¿cómo los explicarías sin jerga y con imágenes mentales?",
+    "¿Por qué la cuántica parece ‘antiintuitiva’? ¿Qué pieza nos falta cuando la comparamos con la experiencia diaria?",
+    "Medición y observador: ¿qué significa realmente ‘medir’ en cuántica y por qué cambia el resultado?",
+    "¿En qué tecnologías actuales dependemos de efectos cuánticos (láseres, chips, resonancias, cripto)?",
+    "¿Dónde acaba lo clásico y empieza lo cuántico? ¿Hay una ‘frontera’ real o es gradual?",
+    "¿Qué interpretaciones de la mecánica cuántica te parecen más útiles (Copenhague, muchos mundos, pilot-wave)?",
+    "¿Qué malentendidos típicos ves en redes sobre cuántica (teletransporte, conciencia, azar absoluto)?",
+    "A medio plazo: ¿qué esperas de la computación cuántica y qué límites prácticos ves frente a lo clásico?"
+  ],
+  "humor_nivel": "medio",
+  "permitir_ironia": false,
+  "referencias_pop": true,
+  "muletillas_permitidas": ["vale", "ojo"],
+  "estilo_dialogo": [
+    "Sonad como dos personas reales: frases cortas, a veces os pisáis, pequeñas pausas (“…”) y alguna risa [se ríe] muy ocasional.",
+    "Héctor: curioso, irónico a ratos, puede interrumpir con preguntas cortas (“espera, ¿cómo?”).",
+    "Aura: clara y entusiasta, aterriza conceptos y no repite lo de Héctor; evita latiguillos obvios.",
+    "No digáis “gran pregunta”, “interesantísimo” ni halagos vacíos. Nada de tono de robot.",
+    "Insertad pausas con “…” o “—” cuando ayuden a la entonación; 1–2 por intervención como máximo.",
+    "Si contáis anécdota, haced callback más tarde (“como decías antes…”).",
+    "Mantén la información rigurosa pero con chispa, 10–15% de humor blanco."
+  ]
+}

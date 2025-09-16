@@ -1,0 +1,30 @@
+{
+  "tema": "La evolución",
+  "presentador": "Héctor",
+  "entrevistado": "Aura",
+  "idioma": "es",
+  "tono_hector": "curioso, con comparaciones cotidianas y ejemplos sencillos; evita tecnicismos innecesarios",
+  "tono_aura": "divulgador científico, cercano, con anécdotas evolutivas curiosas y datos sorprendentes",
+  "nivel_formalidad": "medio",
+  "longitud_respuestas": "larga",
+  "temperatura": 0.9,
+  "preguntas_improvisadas": [6, 10],
+  "guardar_guion": true,
+  "formato_guardado": "txt",
+  "preguntas_guia": [
+    "¿Cómo surgió la teoría de la evolución y qué pruebas la hicieron aceptada en la ciencia?",
+    "¿Qué ejemplos curiosos existen de animales que han desarrollado adaptaciones sorprendentes para sobrevivir?",
+    "¿Cómo explicamos fenómenos como los órganos vestigiales, por ejemplo las muelas del juicio o el apéndice?",
+    "¿Qué casos de evolución convergente nos muestran que la naturaleza tiende a repetir soluciones?",
+    "¿Existen ejemplos de especies que están evolucionando ahora mismo ante nuestros ojos?",
+    "¿Cómo ha influido la evolución en comportamientos humanos como el miedo, la cooperación o la atracción?",
+    "¿Qué papel juega la selección sexual en la aparición de características llamativas como la cola del pavo real?",
+    "¿Cómo ayuda la genética moderna a entender mejor la historia evolutiva de especies extintas como los neandertales?",
+    "¿Qué animales actuales son considerados fósiles vivientes y por qué se les llama así?",
+    "¿Cómo podría continuar la evolución humana en los próximos miles de años?"
+  ],
+  "humor_nivel": "medio",
+  "permitir_ironia": true,
+  "referencias_pop": true,
+  "muletillas_permitidas": ["vale", "ojo"]
+}

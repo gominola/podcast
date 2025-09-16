@@ -1,0 +1,30 @@
+{
+  "tema": "Nintendo Switch 2",
+  "presentador": "Héctor",
+  "entrevistado": "Aura",
+  "idioma": "es",
+  "tono_hector": "dinámico, bromista, con guiños; ironía ligera; ritmo rápido; evita muletillas repetitivas",
+  "tono_aura": "entusiasta, comparaciones con consolas/juegos; chascarrillos puntuales; concreta en datos prácticos",
+  "nivel_formalidad": "baja",
+  "longitud_respuestas": "larga",
+  "temperatura": 0.95,
+  "preguntas_improvisadas": [2, 3],
+  "guardar_guion": true,
+  "formato_guardado": "txt",
+  "preguntas_guia": [
+    "¿Cómo valoras el lanzamiento de Switch 2 en ventas, recepción y propuesta general? ¿Qué ha hecho bien Nintendo y qué flojea?",
+    "¿En qué aspectos prácticos se nota más el salto respecto a la Switch original en el día a día (portátil, dock, autonomía, online)?",
+    "¿Qué tal ha sido el arranque de catálogo? ¿Qué juegos están definiendo la experiencia ahora mismo y por qué?",
+    "¿Cómo ves la retrocompatibilidad y la transición del ecosistema digital (cuentas, eShop, guardados, suscripciones)?",
+    "¿Qué papel le queda a los third-party en Switch 2: más ports nativos o experiencias pensadas para el formato híbrido?",
+    "De cara a Navidad y primeros meses de 2026, ¿qué exclusivos o actualizaciones esperas que consoliden la consola?",
+    "¿Qué accesorios aportan valor real hoy y cuáles esperar a que maduren?",
+    "Si alguien tiene Switch original, ¿cuándo merece la pena dar el salto a Switch 2? ¿Qué factores pondrías en la balanza?",
+    "¿Cómo queda posicionada frente a PS5/Series y a PCs portátiles (Steam Deck, ROG Ally, etc.)? ¿Dónde gana y dónde no compite?",
+    "A 12–24 meses: ¿qué riesgos y oportunidades ves para Switch 2 (suministro, precio, catálogo, online, servicios)?"
+  ],
+  "humor_nivel": "medio-alto",
+  "permitir_ironia": true,
+  "referencias_pop": true,
+  "muletillas_permitidas": ["vale", "ojo", "tío"]
+}
