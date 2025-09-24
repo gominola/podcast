@@ -6,11 +6,17 @@ Interfaz compatible con podcast.py:
   - texto_a_audio(transcript_text, api_key, out_path) -> str (ruta WAV)
   - reproducir_podcast(audio_path) -> None
 
+Novedades:
+- Genera timeline real (start/end) por chunk usando ffprobe:
+    outputs/<slug>/<basename>.timeline.json
+- Escribe un auxiliar con pares (speaker/text/file) para depuración:
+    outputs/<slug>/<basename>_segments.json
+
 Características:
 - Presentador (Héctor) y Entrevistado (Aura) con voces fijas.
 - 'COLD OPEN' se locuta con voz de narrador (tercera voz).
 - Filtra etiquetas [..] y emojis decorativos para evitar lecturas raras.
-- Concatena segmentos a un único WAV con ffmpeg (sin reencode perceptible).
+- Concatena segmentos a un único WAV con ffmpeg (re-encode a WAV PCM).
 - Config desde config.json (opcional) para voces/modelo/parámetros TTS.
 
 config.json (claves usadas):
@@ -22,7 +28,8 @@ config.json (claves usadas):
   "tts_voice_narrator": "alloy",
   "tts_voice_hector": "onyx",
   "tts_voice_aura": "sage",
-  "tts_format": "wav",
+  "tts_format": "wav",         # formato final del archivo
+  "tts_chunk_format": "mp3",   # 'mp3' recomendado para chunks
   "tts_sample_rate": 24000,
 
   "tts_allow_emojis": false,
@@ -43,9 +50,8 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 
 # ---------------------------------------------------------------------
 # Utilidades generales
@@ -65,6 +71,12 @@ def _which(bin_name: str) -> Optional[str]:
 
 def _ensure_parent(p: Path) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
+
+def _slug_and_basename_from_out(out_wav: Path) -> Tuple[str, str]:
+    # out_wav = outputs/<slug>/<basename>.wav
+    slug = out_wav.parent.name
+    basename = out_wav.stem
+    return slug, basename
 
 # ---------------------------------------------------------------------
 # Cliente OpenAI
@@ -200,7 +212,109 @@ def _parse_transcript_from_text(transcript_text: str, presenter: str, guest: str
     return merged
 
 # ---------------------------------------------------------------------
-# Síntesis TTS y concatenación
+# ffprobe / ffmpeg helpers
+# ---------------------------------------------------------------------
+
+def _ffprobe_duration(path: Path) -> float:
+    """
+    Devuelve la duración en segundos de un archivo de audio usando ffprobe.
+    """
+    if _which("ffprobe") is None:
+        # fallback: si no hay ffprobe, intentamos con sox; si no, None
+        return 0.0
+    try:
+        res = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=nw=1:nk=1", path.as_posix()],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, text=True
+        )
+        return float(res.stdout.strip())
+    except Exception:
+        return 0.0
+
+def _concat_wav_ffmpeg(chunk_paths: List[Path], out_wav: Path, sample_rate: int):
+    """
+    Concatena archivos de audio con ffmpeg 'concat demuxer', re-encodeando a WAV PCM 16-bit mono con sample_rate fijo.
+    """
+    if _which("ffmpeg") is None:
+        raise SystemExit("❌ No se encuentra ffmpeg en PATH.")
+    _ensure_parent(out_wav)
+    lst = out_wav.parent / "concat.txt"
+    lst.write_text(
+        "\n".join(f"file '{p.resolve().as_posix()}'" for p in chunk_paths) + "\n",
+        encoding="utf-8"
+    )
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "concat", "-safe", "0", "-i", lst.as_posix(),
+        "-ar", str(sample_rate), "-ac", "1",
+        "-c:a", "pcm_s16le",
+        out_wav.as_posix()
+    ]
+    subprocess.run(cmd, check=True)
+    lst.unlink(missing_ok=True)
+
+# ---------------------------------------------------------------------
+# Timeline builder
+# ---------------------------------------------------------------------
+
+def _write_segments_sidecar(pairs: List[Tuple[str, str]], chunk_paths: List[Path], sidecar_path: Path) -> List[Dict[str, Any]]:
+    """
+    Escribe un auxiliar JSON con (speaker, text, file). Devuelve la lista para reutilizar.
+    """
+    records: List[Dict[str, Any]] = []
+    for (role, text), p in zip(pairs, chunk_paths):
+        speaker = {"NARRATOR": "Narrator", "HECTOR": "Héctor", "AURA": "Aura"}.get(role, "Narrator")
+        records.append({
+            "speaker": speaker,
+            "text": text,
+            "file": p.name
+        })
+    _ensure_parent(sidecar_path)
+    sidecar_path.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+    return records
+
+def _write_timeline_from_chunks(pairs: List[Tuple[str, str]], chunk_paths: List[Path], out_wav: Path) -> Path:
+    """
+    A partir de los chunks generados, mide la duración real de cada uno, acumula start/end
+    y guarda outputs/<slug>/<basename>.timeline.json
+    """
+    slug, basename = _slug_and_basename_from_out(out_wav)
+    outdir = out_wav.parent
+    timeline_path = outdir / f"{basename}.timeline.json"
+    sidecar_path  = outdir / f"{basename}_segments.json"
+
+    # 1) sidecar (speaker/text/file)
+    records = _write_segments_sidecar(pairs, chunk_paths, sidecar_path)
+
+    # 2) medir duraciones y generar segments con start/end
+    segments = []
+    t = 0.0
+    for rec, p in zip(records, chunk_paths):
+        dur = _ffprobe_duration(p)
+        start = t
+        end = t + dur
+        t = end
+        segments.append({
+            "start": round(start, 3),
+            "end": round(end, 3),
+            "speaker": rec["speaker"],
+            "text": rec["text"],
+            "file": rec["file"]
+        })
+
+    payload = {
+        "audio": out_wav.name,
+        "sample_rate": None,  # opcional
+        "segments": segments
+    }
+    _ensure_parent(timeline_path)
+    timeline_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"🧭 Timeline escrito: {timeline_path}")
+    return timeline_path
+
+# ---------------------------------------------------------------------
+# Síntesis TTS
 # ---------------------------------------------------------------------
 
 def _tts_to_file(client, model: str, voice: str, text: str, out_path: Path, fmt: str = "wav", sample_rate: int = 24000):
@@ -235,25 +349,6 @@ def _tts_to_file(client, model: str, voice: str, text: str, out_path: Path, fmt:
     except Exception as e:
         raise RuntimeError(f"Fallo TTS ({voice}): {e}")
 
-def _concat_wav_ffmpeg(chunk_paths: List[Path], out_wav: Path):
-    """
-    Concatena WAVs con ffmpeg 'concat demuxer' (sin reencode).
-    """
-    if _which("ffmpeg") is None:
-        raise SystemExit("❌ No se encuentra ffmpeg en PATH.")
-    _ensure_parent(out_wav)
-    lst = out_wav.parent / "concat.txt"
-    lst.write_text(
-        "\n".join(f"file '{p.resolve().as_posix()}'" for p in chunk_paths) + "\n",
-        encoding="utf-8"
-    )
-    cmd = [
-        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst.as_posix(),
-        "-c", "copy", out_wav.as_posix()
-    ]
-    subprocess.run(cmd, check=True)
-    lst.unlink(missing_ok=True)
-
 # ---------------------------------------------------------------------
 # API pública (compat con podcast.py)
 # ---------------------------------------------------------------------
@@ -261,7 +356,9 @@ def _concat_wav_ffmpeg(chunk_paths: List[Path], out_wav: Path):
 def texto_a_audio(transcript_text: str, api_key: str, out_path: str) -> str:
     """
     Genera audio WAV con voces diferenciadas a partir de un transcript en texto.
-    Retorna la ruta al WAV final (out_path).
+    Retorna la ruta al WAV final (out_path). Además, escribe:
+      - <basename>_segments.json
+      - <basename>.timeline.json
     """
     cfg = _read_config(Path("config.json"))
     presenter = cfg.get("presentador", "Héctor")
@@ -274,6 +371,8 @@ def texto_a_audio(transcript_text: str, api_key: str, out_path: str) -> str:
     voice_aura   = cfg.get("tts_voice_aura", "sage")
     fmt          = cfg.get("tts_format", "wav")
     sample_rate  = int(cfg.get("tts_sample_rate", 24000))
+    # Formato de los CHUNKS (lo que devuelve el TTS). Recomendamos 'mp3' por compatibilidad.
+    fmt_chunk    = cfg.get("tts_chunk_format", cfg.get("tts_format", "mp3")) or "mp3"
 
     allow_emojis = bool(cfg.get("tts_allow_emojis", False))
     emoji_wh     = cfg.get("tts_whitelist_emojis", ["😂","😍","😲","😏","😉","🙏","🔥"])
@@ -291,7 +390,7 @@ def texto_a_audio(transcript_text: str, api_key: str, out_path: str) -> str:
         shutil.rmtree(chunks_dir)
     chunks_dir.mkdir(parents=True, exist_ok=True)
 
-    # Genera un WAV por bloque
+    # Genera un archivo de audio por bloque
     chunk_paths: List[Path] = []
     for i, (role, raw_text) in enumerate(pairs, start=1):
         if not raw_text.strip():
@@ -310,25 +409,45 @@ def texto_a_audio(transcript_text: str, api_key: str, out_path: str) -> str:
             print(f"  • {role:<8} → texto filtrado vacío, se omite.")
             continue
 
-        out_chunk = chunks_dir / f"{i:03d}_{role.lower()}.{fmt}"
+        out_chunk = chunks_dir / f"{i:03d}_{role.lower()}.{fmt_chunk}"
         print(f"  • {role:<8} → {voice:<8}  [{len(tts_text)} chars]")
-        _tts_to_file(client, model=model, voice=voice, text=tts_text, out_path=out_chunk, fmt=fmt, sample_rate=sample_rate)
+        _tts_to_file(client, model=model, voice=voice, text=tts_text, out_path=out_chunk, fmt=fmt_chunk, sample_rate=sample_rate)
         chunk_paths.append(out_chunk)
+
+    # Debug: listar chunks generados
+    try:
+        print("\n📄 Chunks generados:")
+        for p in chunk_paths:
+            size = p.stat().st_size if p.exists() else 0
+            print(f"   - {p.name}  ({size} bytes)")
+    except Exception:
+        pass
 
     if not chunk_paths:
         raise SystemExit("❌ No se generaron chunks de audio (guion vacío tras filtrado).")
 
+    # Concatenación a WAV final
     if len(chunk_paths) == 1:
-        # Solo un chunk, copiar directamente a out_wav
         print("⚠️ Solo un bloque de audio generado, copiando directamente al archivo final.")
         shutil.copy(chunk_paths[0], out_wav)
     else:
         print(f"🔗 Concatenando {len(chunk_paths)} bloques de audio con ffmpeg...")
-        _concat_wav_ffmpeg(chunk_paths, out_wav)
+        _concat_wav_ffmpeg(chunk_paths, out_wav, sample_rate)
 
     # Verificar que el archivo final existe y no está vacío
     if not out_wav.exists() or out_wav.stat().st_size == 0:
         raise RuntimeError(f"❌ El archivo de salida no se generó correctamente: {out_wav}")
+
+    # Timeline real a partir de duraciones de chunks
+    _write_timeline_from_chunks(pairs, chunk_paths, out_wav)
+
+    # Limpieza: eliminar carpeta temporal de chunks una vez generado todo
+    try:
+        if chunks_dir.exists():
+            shutil.rmtree(chunks_dir)
+            print(f"🧹 Carpeta temporal eliminada: {chunks_dir}")
+    except Exception as e:
+        print(f"⚠️ No se pudo borrar {chunks_dir}: {e}", file=sys.stderr)
 
     print(f"\n✅ Audio generado correctamente: {out_wav}")
     return out_wav.as_posix()
@@ -347,6 +466,10 @@ def reproducir_podcast(audio_path: str) -> None:
         except Exception as e:
             print(f"⚠️ ffplay falló: {e}", file=sys.stderr)
     print(f"ℹ️ Reproduce el archivo manualmente: {audio_path}")
+
+# ---------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------
 
 if __name__ == "__main__":
     import argparse
@@ -369,10 +492,8 @@ if __name__ == "__main__":
     config_path = Path(args.config)
     cfg = _read_config(config_path)
 
-    slug = None
-    basename = None
-    txt_path = None
-    out_path = None
+    txt_path: Optional[Path] = None
+    out_path: Optional[Path] = None
 
     if args.tema_from_config:
         tema = cfg.get("tema", "")

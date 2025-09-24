@@ -5,16 +5,47 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
+
+# Nota: usamos el filtro 'ass=' (no 'subtitles=') para archivos .ass y escapamos el path
+# para evitar problemas con ':' ',' '\' o quotes en rutas al pasar por -vf.
 
 def read_json(path: Path) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+def count_ass_events(ass_path: Path) -> int:
+    """
+    Devuelve el número de líneas 'Dialogue:' en un .ass.
+    Si el archivo no existe o falla la lectura, devuelve 0.
+    """
+    try:
+        text = ass_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return 0
+    count = 0
+    for line in text.splitlines():
+        if line.lstrip().startswith("Dialogue:"):
+            count += 1
+    return count
+
+def ensure_ass_ready(ass: Path) -> Path:
+    """
+    Verifica que el ASS existe y contiene al menos un 'Dialogue:'.
+    Si no, aborta con un mensaje claro para que el usuario ejecute `make srt`.
+    """
+    if not ass.exists():
+        raise SystemExit(f"❌ No existe ASS: {ass}\n   Ejecuta primero `make srt` para generarlo.")
+    n = count_ass_events(ass)
+    if n == 0:
+        raise SystemExit(f"❌ ASS sin eventos (0 'Dialogue'). Revisa 'timeline_to_subs.py' y ejecuta `make srt`.")
+    return ass
 
 def build_paths_from_config(cfg_path: Path) -> dict:
     cfg = read_json(cfg_path)
@@ -38,39 +69,30 @@ def run(cmd: list[str]) -> None:
     print("  $", " ".join(shlex.quote(c) for c in cmd))
     subprocess.run(cmd, check=True)
 
-def ensure_ass_from_srt(srt: Path, txt: Path, cfg_json: Path, ass_out: Path) -> None:
+def _ff_escape(p: Path) -> str:
     """
-    Llama al CLI srt_to_ass.py para colorear por orador y envolver líneas.
+    Escapa la ruta para filtros de ffmpeg (ass=/subtitles=) donde ':' ',' '\' y comillas rompen el parser.
     """
-    if not srt.exists():
-        raise SystemExit(f"❌ No existe SRT: {srt}")
-    if not txt.exists():
-        raise SystemExit(f"❌ No existe TXT (guion): {txt}")
+    s = p.as_posix()
+    s = s.replace("\\", "\\\\")
+    s = s.replace(":", r"\:")
+    s = s.replace(",", r"\,")
+    s = s.replace("'", r"\'")
+    return s
 
-    # Ejecuta el script como CLI
-    cmd = [
-        sys.executable,
-        str(Path(__file__).with_name("srt_to_ass.py")),
-        "--srt", str(srt),
-        "--txt", str(txt),
-        "--config", str(cfg_json),
-        "--out", str(ass_out),
-    ]
-    run(cmd)
-    if not ass_out.exists() or ass_out.stat().st_size == 0:
-        raise SystemExit("❌ srt_to_ass no generó el ASS.")
-
-def ffmpeg_burn(image: Path, audio: Path, ass: Path, out_mp4: Path, fps: int = 30, res: str = "1920x1080") -> None:
+def ffmpeg_burn(image: Path, audio: Path, ass: Path | None, out_mp4: Path, fps: int = 30, res: str = "1920x1080", vf_override: str | None = None) -> None:
     if not image.exists():
         raise SystemExit(f"❌ No existe imagen: {image}")
     if not audio.exists():
         raise SystemExit(f"❌ No existe audio: {audio}")
-    if not ass.exists():
-        raise SystemExit(f"❌ No existe ASS: {ass}")
 
-    # ffmpeg + libass: subtítulos desde ASS + imagen estática + audio
-    # Nota: quotes cuidadosos para rutas con espacios
-    vf = f"subtitles={ass.as_posix()}"
+    if vf_override is None:
+        if ass is None or not ass.exists():
+            raise SystemExit(f"❌ No existe ASS: {ass}")
+        vf = f"ass={_ff_escape(ass)}"
+    else:
+        vf = vf_override
+
     cmd = [
         "ffmpeg", "-y",
         "-loop", "1",
@@ -95,6 +117,7 @@ def main():
     ap.add_argument("--image", required=False, default="assets/studio_full.jpg")
     ap.add_argument("--audio", default=None)
     ap.add_argument("--srt", default=None)
+    ap.add_argument("--ass", default=None)
     ap.add_argument("--out", default=None)
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--res", default="1920x1080")
@@ -106,27 +129,26 @@ def main():
         paths = build_paths_from_config(cfg_json)
         image = Path(args.image).resolve()
         audio = Path(args.audio).resolve() if args.audio else paths["wav"]
-        srt   = Path(args.srt).resolve() if args.srt else paths["srt"]
-        txt   = paths["txt"]
         ass   = paths["ass"]
         out_mp4 = Path(args.out).resolve() if args.out else paths["mp4"]
     else:
         # modo manual
-        if not (args.audio and args.srt and args.out):
-            raise SystemExit("❌ En modo manual indica --audio --srt --out (y opcionalmente --image).")
+        if not (args.audio and (args.ass or args.srt) and args.out):
+            raise SystemExit("❌ En modo manual indica --audio --ass --out (o --audio --srt --out si el .ass está junto al .srt).")
         image = Path(args.image).resolve()
         audio = Path(args.audio).resolve()
-        srt   = Path(args.srt).resolve()
-        # asumimos .txt al lado de .srt con el mismo basename
-        txt   = srt.with_suffix(".txt")
-        ass   = srt.with_suffix(".ass")
+        if args.ass:
+            ass = Path(args.ass).resolve()
+        else:
+            srt = Path(args.srt).resolve()
+            ass = srt.with_suffix(".ass")
         out_mp4 = Path(args.out).resolve()
 
-    print("🎬 Preparando ASS coloreado a partir de SRT + TXT…")
-    ensure_ass_from_srt(srt, txt, cfg_json, ass)
-
+    print(f"🎬 Usando ASS ya generado: {ass}")
+    ensure_ass_ready(ass)
     print("🎬 Generando MP4 (ffmpeg + libass)…")
     ffmpeg_burn(image, audio, ass, out_mp4, fps=args.fps, res=args.res)
+
     print(f"✅ Vídeo listo: {out_mp4}")
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ OUTDIR      = outputs/$(SLUG)
 TXT         = $(OUTDIR)/$(BASENAME).txt
 AUDIO       = $(OUTDIR)/$(BASENAME).wav
 SRT         = $(OUTDIR)/$(BASENAME).srt
+ASS         = $(OUTDIR)/$(BASENAME).ass
 MP4_FAST    = $(OUTDIR)/$(BASENAME)_fast.mp4
 
 .PHONY: all guion audio srt video clean debug
@@ -32,20 +33,20 @@ $(AUDIO): $(TXT)
 	@ls -l $(OUTDIR) || true
 	@echo "✅ Audio: $(AUDIO)"
 
-# Generar subtítulos (Whisper)
+# Generar subtítulos (desde timeline del guion → .srt + .ass)
 srt: $(SRT)
 
-$(SRT): $(AUDIO)
-	@echo "🗣️  Generando subtítulos (Whisper)…"
-	$(USING_PY) srt_whisper.py --tema-from-config
-	@echo "📄 Listando OUTDIR tras SRT:"
+$(SRT) $(ASS): $(TXT)
+	@echo "🗣️  Generando subtítulos (timeline)…"
+	$(USING_PY) timeline_to_subs.py --tema-from-config
+	@echo "📄 Listando OUTDIR tras subtítulos:"
 	@ls -l $(OUTDIR) || true
-	@echo "✅ SRT generado: $(SRT)"
+	@echo "✅ Subtítulos generados: $(SRT) + $(ASS)"
 
-# Generar vídeo rápido (con ASS interno de video.py)
+# Generar vídeo rápido (usa .ass generado por timeline_to_subs.py)
 video: $(MP4_FAST)
 
-$(MP4_FAST): $(AUDIO) $(SRT)
+$(MP4_FAST): $(AUDIO) $(ASS)
 	@echo "🎬 Generando vídeo (colores por orador, ASS)…"
 	$(USING_PY) video.py \
 		--tema-from-config \
@@ -54,7 +55,13 @@ $(MP4_FAST): $(AUDIO) $(SRT)
 	@echo "✅ Vídeo listo: $(MP4_FAST)"
 
 clean:
-	rm -rf outputs/*
+	@slug=$$(jq -r '.output_slug' config.json); \
+	if [ "$$slug" != "null" ] && [ -n "$$slug" ]; then \
+		echo "🧹 Limpiando solo outputs/$$slug"; \
+		rm -rf outputs/$$slug; \
+	else \
+		echo "⚠️ No se encontró output_slug en config.json"; \
+	fi
 
 debug:
 	@echo "USING_PY    = $(USING_PY)"
@@ -64,4 +71,5 @@ debug:
 	@echo "TXT         = $(TXT)"
 	@echo "AUDIO       = $(AUDIO)"
 	@echo "SRT         = $(SRT)"
+	@echo "ASS         = $(ASS)"
 	@echo "MP4_FAST    = $(MP4_FAST)"

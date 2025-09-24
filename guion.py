@@ -551,6 +551,39 @@ def _llm_siguiente_linea(client: OpenAI, transcript: str, orador: str) -> str:
     texto = _limit_emoji_per_sentence(_filtra_emojis(texto), max_per_sentence=1)
     return texto
 
+
+# ---------------------------------------------------------------------
+# Helper: exportar segmentos JSON para TTS/subtítulos
+# ---------------------------------------------------------------------
+def _save_segments_json(outdir: str, basename: str, items: List[Tuple[str, str]]) -> str:
+    """
+    Exporta un JSON con segmentos para el nuevo pipeline TTS/subtítulos.
+    Estructura: [{"speaker": "...", "text": "..."}...]
+    - Mapea "COLD OPEN" -> "Narrator"
+    - Aplica el filtro de emojis (solo los expresivos permitidos, máx. 1 por frase)
+    """
+    segs = []
+    for who, txt in items:
+        # Aseguramos el mismo postproceso anti-emoji decorativo que usamos al guardar
+        clean = _limit_emoji_per_sentence(_filtra_emojis(txt), max_per_sentence=1)
+        if who.upper() == "COLD OPEN":
+            segs.append({"speaker": "Narrator", "text": clean})
+        else:
+            # Normaliza nombres por seguridad (acentos/variantes)
+            wl = who.strip().lower()
+            if wl.startswith("hec"):
+                speaker = "Héctor"
+            elif wl.startswith("aura"):
+                speaker = "Aura"
+            else:
+                speaker = who.strip() or "Narrator"
+            segs.append({"speaker": speaker, "text": clean})
+
+    seg_path = os.path.join(outdir, f"{basename}_segments.json")
+    with open(seg_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(segs, f, ensure_ascii=False, indent=2)
+    return seg_path
+
 # ---------------------------------------------------------------------
 # Exportadores
 # ---------------------------------------------------------------------
@@ -626,6 +659,12 @@ def _guardar(tema: str, items: List[Tuple[str, str]], formato: str) -> str:
     # 2) Escritura robusta (LF)
     with open(fname, "w", encoding=encoding, newline="\n") as f:
         f.write(contenido)
+
+    # 2b) Exportar segmentos JSON para el pipeline (TTS/subs)
+    try:
+        _save_segments_json(outdir, os.path.basename(base), items)
+    except Exception as e:
+        print(f"{Fore.YELLOW}[WARN]{Style.RESET_ALL} No se pudo crear segments.json: {e}")
 
     # Debug: mostrar ruta y formato guardado
     print(f"{Fore.GREEN}[SAVE]{Style.RESET_ALL} Archivo guardado: {fname} (formato={formato}, slug={slug}, basename={os.path.basename(base)})")
