@@ -1,3 +1,22 @@
 {
-  "tema": "Fisica cuantica vs clasica"
+  "tema": "La Evolución: origen de la vida, humanos y futuro",
+  "tema_slug": "la-evolucion",
+  "output_slug": "la-evolucion",
+  "output_basename": "la-evolucion",
+  "whisper_model": "base",
+"idioma": "es",
+
+    "use_speaker_colors": true,
+    "color_hector": "#2EA8E6",
+    "color_aura": "#FFD23F",
+  
+    "subtitle_font": "Arial",
+    "subtitle_fontsize": 60,
+    "subtitle_margin_v": 40,
+    "subtitle_margin_lr": 140,        
+    "subtitle_outline": 2.0,
+    "subtitle_shadow": 1,
+  
+    "speaker_gap_threshold": 0.6      
+          
 }

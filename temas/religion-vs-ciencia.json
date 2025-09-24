@@ -1,0 +1,39 @@
+{
+  "tema": "Religión vs Ciencia",
+  "presentador": "Héctor",
+  "entrevistado": "Aura",
+  "idioma": "es",
+  "tono_hector": "escéptico, racionalista y directo; defiende la visión científica con ejemplos históricos y datos concretos",
+  "tono_aura": "apasionada defensora de la fe; conecta lo trascendental con la vida cotidiana y busca resaltar el sentido de propósito",
+  "nivel_formalidad": "medio",
+  "longitud_respuestas": "media",
+  "temperatura": 0.9,
+  "preguntas_improvisadas": [3, 6],
+  "guardar_guion": true,
+  "formato_guardado": "txt",
+  "preguntas_guia": [
+    "Históricamente, ¿qué momentos clave marcan el choque más fuerte entre religión y ciencia?",
+    "¿Crees que la religión aporta respuestas que la ciencia nunca podrá dar, o simplemente son planos diferentes?",
+    "¿Dónde ves ejemplos claros en los que la religión ha frenado o impulsado avances científicos?",
+    "¿Puede la ciencia explicar el sentido último de la vida o eso pertenece a la fe?",
+    "En el día a día, ¿cómo conviven la espiritualidad y el pensamiento científico en la vida de las personas?",
+    "¿Qué opinas de la idea de que la religión y la ciencia son complementarias y no opuestas?",
+    "¿Hasta qué punto crees que la moral debe basarse en principios religiosos o en la razón científica?",
+    "¿Qué figuras históricas te parecen más representativas de esta tensión (Galileo, Darwin, Tomás de Aquino…)?",
+    "¿Existen malentendidos típicos sobre la relación entre religión y ciencia que se repiten hoy en redes sociales?",
+    "A futuro: ¿cómo imaginas la relación entre ciencia y fe en un mundo cada vez más tecnológico?"
+  ],
+  "humor_nivel": "medio",
+  "permitir_ironia": true,
+  "referencias_pop": true,
+  "muletillas_permitidas": ["vale", "ojo"],
+  "estilo_dialogo": [
+    "Sonad como dos personas reales: frases cortas, con interrupciones naturales y pequeñas pausas (“…”) cuando convenga.",
+    "Héctor: racional, irónico a ratos, cuestiona con ejemplos científicos y cierta provocación.",
+    "Aura: firme pero cordial, defiende la fe con pasión y ejemplos humanos o espirituales, evitando dogmatismos extremos.",
+    "No digáis frases huecas tipo “gran pregunta” o cumplidos vacíos.",
+    "Insertad pausas y modulad la voz para sonar cercanos, no robóticos.",
+    "Cuando discutáis, mantened un tono respetuoso pero con tensión dialéctica, como en un buen debate.",
+    "Dejad espacio para reflexiones humorísticas o comparaciones modernas (ej. referencias pop o actualidad)."
+  ]
+}
